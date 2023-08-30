@@ -1,0 +1,47 @@
+name: Terraform Deployment
+ 
+on:
+  push:
+    branches:
+     - main
+
+jobs:
+  terraform:
+    name: 'Terraform Deployment'
+    runs-on: ubuntu-latest
+
+    env:
+      # AWS variables
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      
+      # Terraform variables
+      TF_VAR_access_token: ${{ secrets.LD_ACCESS_TOKEN }}
+      TF_VAR_project_name: ${{ github.repository }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Process environments
+      run: |
+        processed_project_name=$(echo $TF_VAR_project_name | sed 's/ingridsandev\///' | sed 's/-launchdarkly//')
+        echo "TF_VAR_project_name=${processed_project_name}" >> $GITHUB_ENV
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.5
+
+    - name: Terraform Initialize
+      run: terraform init
+
+    - name: Terraform Validate
+      run: terraform validate
+
+    - name: Terraform Plan
+      run: terraform plan
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
